@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Wedding Invitation Builder — 3-slide</title>
+
+<!-- fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Playfair+Display:wght@400;700&family=Dancing+Script&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #f6f6f8;
+    --card-w: 420px;
+    --card-h: 594px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Poppins",sans-serif;
+    background:var(--bg);
+    color:#222;
+    padding:20px;
+    display:flex;
+    justify-content:center;
+  }
+  .container{
+    width:100%;
+    max-width:1200px;
+    display:grid;
+    grid-template-columns:420px 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  /* Left panel */
+  .panel{
+    background:#fff;
+    padding:18px;
+    border-radius:12px;
+    box-shadow:0 8px 26px rgba(0,0,0,0.06);
+  }
+  .panel h2{margin:0 0 12px 0}
+  .steps{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .step-pill{padding:6px 10px;border-radius:999px;background:#f1f5f9;font-weight:600;font-size:13px;color:#334155;cursor:pointer}
+  .controls{display:flex;flex-direction:column;gap:8px}
+  label{display:block;font-size:13px;margin-bottom:6px}
+  input[type="text"], input[type="file"], select, input[type="color"], input[type="number"], textarea{
+    width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px;
+  }
+  textarea{min-height:80px;resize:vertical}
+  .row{display:flex;gap:8px}
+  button{padding:8px 12px;border-radius:8px;border:0;background:#0f1724;color:#fff;cursor:pointer}
+  .btn-ghost{background:#fff;border:1px solid #e6e9ef;color:#0f1724}
+  .small{padding:6px 8px;font-size:13px}
+  .muted{font-size:13px;color:#55607a}
+
+  /* Right preview */
+  .preview{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .preview-header{display:flex;justify-content:space-between;align-items:center}
+  .invitation-frame{
+    width:100%;
+    max-width:var(--card-w);
+    height:var(--card-h);
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 18px 40px rgba(0,0,0,0.12);
+    position:relative;
+    overflow:hidden;
+    border:1px solid rgba(0,0,0,0.04);
+    margin:0 auto;
+  }
+
+  /* arrows (on sides) */
+  .arrow{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:44px;height:44px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,0.85);
+    border:1px solid rgba(0,0,0,0.06);
+    cursor:pointer; user-select:none; z-index:60;
+  }
+  .arrow.left{left:8px}
+  .arrow.right{right:8px}
+  .arrow:hover{background:#fff}
+
+  /* dots */
+  .dots{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;display:flex;gap:8px;z-index:60}
+  .dot{width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,0.15);cursor:pointer}
+  .dot.active{background:#0f1724}
+
+  /* text blocks */
+  .text-block{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    cursor:grab;
+    user-select:none;
+    text-align:center;
+    z-index:50;
+    min-width:20px;
+  }
+  .text-block:active{cursor:grabbing}
+  .text-block .handle{font-size:12px;color:#6b7280;margin-bottom:6px;opacity:0}
+  .text-block:hover .handle{opacity:1}
+
+  .subtitle{font-size:14px;color:#333;font-weight:500}
+  .name{font-family:"Playfair Display",serif;font-weight:700;font-size:28px;color:#5b3a2a}
+  .meta{font-size:13px;color:#444}
+
+  /* responsive */
+  @media (max-width:980px){
+    .container{grid-template-columns:1fr; padding-bottom:40px}
+    .invitation-frame{max-width:340px;height:480px}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <!-- LEFT: controls -->
+    <div class="panel">
+      <h2>Invitation Builder</h2>
+      <div class="steps" id="stepPills">
+        <div class="step-pill" data-step="1">1. Template</div>
+        <div class="step-pill" data-step="2">2. Text</div>
+        <div class="step-pill" data-step="3">3. Position</div>
+        <div class="step-pill" data-step="4">4. Style</div>
+        <div class="step-pill" data-step="5">5. Finalize</div>
+      </div>
+
+      <div class="controls" id="stepControls">
+        <!-- injected -->
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:12px;align-items:center">
+        <div class="muted">Step <span id="currentStep">1</span> / 5</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-ghost small" id="prevBtn" disabled>Back</button>
+          <button class="small" id="nextBtn">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: preview -->
+    <div class="preview">
+      <div class="preview-header">
+        <div><strong>Live Preview</strong><div class="muted" style="font-size:13px">Arrows on both sides • Dots below</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-ghost small" id="resetPositionsBtn">Reset Positions</button>
+          <button class="small" id="downloadBtn">Download PNG</button>
+        </div>
+      </div>
+
+      <div class="invitation-frame" id="frame">
+        <!-- background will be applied to this inner element -->
+        <div id="card" class="" style="width:100%;height:100%;background:#fff center/cover no-repeat;position:relative">
+          <!-- text blocks are inserted here -->
+          <div class="text-block" id="block-subtitle" style="top:8%">
+            <div class="handle">⇅ drag</div>
+            <div class="subtitle" id="subtitleText">You are invited to</div>
+          </div>
+
+          <div class="text-block" id="block-names" style="top:22%">
+            <div class="handle">⇅ drag</div>
+            <div class="name" id="namesText">Aman &amp; Priya</div>
+            <div class="meta" id="msgText">Request the pleasure of your company</div>
+          </div>
+
+          <div class="text-block" id="block-date" style="top:40%">
+            <div class="handle">⇅ drag</div>
+            <div class="meta" id="dateText">25th December 2025 • 6:00 PM</div>
+            <div class="meta" id="venueText">Rose Garden Banquet, New Delhi</div>
+          </div>
+        </div>
+
+        <!-- arrows -->
+        <div class="arrow left" id="arrowLeft" title="Previous slide">&#10094;</div>
+        <div class="arrow right" id="arrowRight" title="Next slide">&#10095;</div>
+
+        <!-- dots -->
+        <div class="dots" id="dotsContainer"></div>
+      </div>
+
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+/* --------- Data model: 3 slides --------- */
+const slides = [
+  { // slide 0
+    bg: '', // data URL or object URL
+    subtitle: 'You are invited to',
+    names: 'Aman & Priya',
+    msg: 'Request the pleasure of your company',
+    date: '25th December 2025 • 6:00 PM',
+    venue: 'Rose Garden Banquet, New Delhi',
+    // positions (left & top in px relative to card) — will be initialized
+    positions: {
+      subtitle: {left: null, top: null},
+      names: {left: null, top: null},
+      msg: {left: null, top: null},
+      date: {left: null, top: null},
+      venue: {left: null, top: null}
+    },
+    // style per slide
+    fontFamily: "'Playfair Display', serif",
+    nameSize: 28,
+    subtitleSize: 14,
+    metaSize: 13,
+    color: "#402816"
+  },
+  { // slide 1
+    bg: '',
+    subtitle: 'Reception',
+    names: 'Aman & Priya',
+    msg: 'Join us for dinner & dance',
+    date: '26th December 2025 • 7:00 PM',
+    venue: 'Royal Hall, Jaipur',
+    positions:{
+      subtitle:{left:null,top:null},
+      names:{left:null,top:null},
+      msg:{left:null,top:null},
+      date:{left:null,top:null},
+      venue:{left:null,top:null}
+    },
+    fontFamily: "'Playfair Display', serif",
+    nameSize:28, subtitleSize:14, metaSize:13, color:"#402816"
+  },
+  { // slide 2
+    bg: '',
+    subtitle: 'RSVP',
+    names: 'Please Confirm',
+    msg: 'Let us know your presence',
+    date: 'By 10th Dec 2025',
+    venue: 'contact@flowers.example',
+    positions:{
+      subtitle:{left:null,top:null},
+      names:{left:null,top:null},
+      msg:{left:null,top:null},
+      date:{left:null,top:null},
+      venue:{left:null,top:null}
+    },
+    fontFamily: "'Playfair Display', serif",
+    nameSize:28, subtitleSize:14, metaSize:13, color:"#402816"
+  }
+];
+
+let current = 0; // current slide index
+
+/* DOM refs */
+const card = document.getElementById('card');
+const frame = document.getElementById('frame');
+const dotsContainer = document.getElementById('dotsContainer');
+
+const subtitleText = document.getElementById('subtitleText');
+const namesText = document.getElementById('namesText');
+const msgText = document.getElementById('msgText');
+const dateText = document.getElementById('dateText');
+const venueText = document.getElementById('venueText');
+
+const blockSubtitle = document.getElementById('block-subtitle');
+const blockNames = document.getElementById('block-names');
+const blockDate = document.getElementById('block-date');
+
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const stepControls = document.getElementById('stepControls');
+const stepPills = document.querySelectorAll('.step-pill');
+const currentStepEl = document.getElementById('currentStep');
+
+const arrowLeft = document.getElementById('arrowLeft');
+const arrowRight = document.getElementById('arrowRight');
+
+const resetPositionsBtn = document.getElementById('resetPositionsBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
+let step = 1;
+const totalSteps = 5;
+
+/* -------------------------
+   Utilities
+--------------------------*/
+function px(n){ return typeof n === 'number' ? n + 'px' : n; }
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+function getCardRect(){ return card.getBoundingClientRect(); }
+
+/* -------------------------
+   Render slide UI
+--------------------------*/
+function renderSlide(){
+  const s = slides[current];
+  // background
+  if(s.bg) card.style.backgroundImage = `url("${s.bg}")`;
+  else card.style.backgroundImage = '';
+
+  // texts
+  subtitleText.textContent = s.subtitle;
+  namesText.textContent = s.names;
+  msgText.textContent = s.msg;
+  dateText.textContent = s.date;
+  venueText.textContent = s.venue;
+
+  // styles
+  namesText.style.fontFamily = s.fontFamily;
+  namesText.style.fontSize = s.nameSize + 'px';
+  namesText.style.color = s.color;
+  subtitleText.style.fontSize = s.subtitleSize + 'px';
+  subtitleText.style.color = s.color;
+  msgText.style.fontSize = s.metaSize + 'px';
+  dateText.style.fontSize = s.metaSize + 'px';
+  venueText.style.fontSize = s.metaSize + 'px';
+
+  // positions: if not set yet, set defaults
+  const cardRect = getCardRect();
+  function posOrDefault(key, defaultTopPercent){
+    const p = s.positions[key];
+    if(p.left === null || p.top === null){
+      // set center top at default percent
+      const left = Math.round(cardRect.width / 2);
+      const top = Math.round(cardRect.height * defaultTopPercent);
+      s.positions[key].left = left;
+      s.positions[key].top = top;
+      return {left, top};
+    }
+    return {left:p.left, top:p.top};
+  }
+
+  const subtPos = posOrDefault('subtitle', 0.08);
+  const namesPos = posOrDefault('names', 0.22);
+  const msgPos = posOrDefault('msg', 0.34);
+  const datePos = posOrDefault('date', 0.46);
+  const venuePos = posOrDefault('venue', 0.56);
+
+  // apply positions (use left as center)
+  blockSubtitle.style.left = px(subtPos.left);
+  blockSubtitle.style.top = px(subtPos.top);
+  blockNames.style.left = px(namesPos.left);
+  blockNames.style.top = px(namesPos.top);
+  // msg is inside the names block as .meta; but we also saved position for msg in case user moves it individually later
+  // For simplicity currently names block contains both name + msg; date block contains date + venue
+  blockDate.style.left = px(datePos.left);
+  blockDate.style.top = px(datePos.top);
+
+  renderDots();
+}
+
+/* dots */
+function renderDots(){
+  dotsContainer.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const el = document.createElement('div');
+    el.className = 'dot' + (i===current ? ' active' : '');
+    el.addEventListener('click', ()=> { current = i; renderSlide(); });
+    dotsContainer.appendChild(el);
+  }
+}
+
+/* -------------------------
+   File uploads (3 inputs)
+   Step 1 UI injection
+--------------------------*/
+function loadStep1(){
+  stepControls.innerHTML = '';
+  const container = document.createElement('div');
+
+  // three inputs labeled
+  for(let i=0;i<3;i++){
+    const label = document.createElement('label');
+    label.textContent = `Upload image for page ${i+1}`;
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.dataset.index = i;
+    input.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      const url = URL.createObjectURL(f);
+      slides[i].bg = url;
+      // keep current on same index if user uploaded for current, else do not change current
+      if(i === current) renderSlide();
+      renderDots();
+    });
+    container.appendChild(label);
+    container.appendChild(input);
+  }
+
+  const hint = document.createElement('div');
+  hint.className = 'muted';
+  hint.style.marginTop = '8px';
+  hint.textContent = 'Upload the three pages of your invitation. After upload use arrows or dots to navigate.';
+  container.appendChild(hint);
+  stepControls.appendChild(container);
+}
+
+/* -------------------------
+   Step 2: Text inputs
+--------------------------*/
+function loadStep2(){
+  stepControls.innerHTML = '';
+
+  function addRow(labelText, value, onInput){
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value;
+    input.addEventListener('input', ()=> onInput(input.value));
+    stepControls.appendChild(label);
+    stepControls.appendChild(input);
+  }
+
+  const s = slides[current];
+
+  addRow('Heading (small)', s.subtitle, (v)=>{ s.subtitle = v; renderPreviewTexts(); });
+  addRow('Names (main)', s.names, (v)=>{ s.names = v; renderPreviewTexts(); });
+  addRow('Message (below names)', s.msg, (v)=>{ s.msg = v; renderPreviewTexts(); });
+  addRow('Date & time', s.date, (v)=>{ s.date = v; renderPreviewTexts(); });
+  addRow('Venue', s.venue, (v)=>{ s.venue = v; renderPreviewTexts(); });
+
+  const hint = document.createElement('div');
+  hint.className = 'muted';
+  hint.style.marginTop = '8px';
+  hint.textContent = 'Edit text for the current page. Each slide has its own text.';
+  stepControls.appendChild(hint);
+}
+
+/* helper to update text nodes quickly */
+function renderPreviewTexts(){
+  const s = slides[current];
+  subtitleText.textContent = s.subtitle;
+  namesText.textContent = s.names;
+  msgText.textContent = s.msg;
+  dateText.textContent = s.date;
+  venueText.textContent = s.venue;
+}
+
+/* -------------------------
+   Step 3: Position instructions
+--------------------------*/
+function loadStep3(){
+  stepControls.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'muted';
+  p.textContent = 'Drag the text blocks directly on the invitation card to position them. Use mouse or touch. Use Reset Positions to restore defaults.';
+  stepControls.appendChild(p);
+}
+
+/* -------------------------
+   Step 4: Style controls
+--------------------------*/
+function loadStep4(){
+  stepControls.innerHTML = '';
+
+  const s = slides[current];
+
+  // font family
+  const labelF = document.createElement('label'); labelF.textContent = 'Font family (Names)';
+  const selectF = document.createElement('select');
+  [['Playfair Display', "'Playfair Display', serif"], ['Poppins', "'Poppins', sans-serif"], ['Dancing Script', "'Dancing Script', cursive"], ['Georgia', 'Georgia, serif']].forEach(([name, val])=>{
+    const o = document.createElement('option'); o.value = val; o.textContent = name;
+    if(val === s.fontFamily) o.selected = true;
+    selectF.appendChild(o);
+  });
+  selectF.addEventListener('change', ()=> { s.fontFamily = selectF.value; renderSlide(); });
+  stepControls.appendChild(labelF); stepControls.appendChild(selectF);
+
+  // sizes and color
+  const labelNameSize = document.createElement('label'); labelNameSize.textContent = 'Names size (px)';
+  const inputNameSize = document.createElement('input'); inputNameSize.type = 'number'; inputNameSize.value = s.nameSize;
+  inputNameSize.addEventListener('input', ()=> { s.nameSize = Number(inputNameSize.value); renderSlide(); });
+  stepControls.appendChild(labelNameSize); stepControls.appendChild(inputNameSize);
+
+  const labelSubSize = document.createElement('label'); labelSubSize.textContent = 'Heading size (px)';
+  const inputSubSize = document.createElement('input'); inputSubSize.type = 'number'; inputSubSize.value = s.subtitleSize;
+  inputSubSize.addEventListener('input', ()=> { s.subtitleSize = Number(inputSubSize.value); renderSlide(); });
+  stepControls.appendChild(labelSubSize); stepControls.appendChild(inputSubSize);
+
+  const labelMetaSize = document.createElement('label'); labelMetaSize.textContent = 'Meta (date/venue) size (px)';
+  const inputMetaSize = document.createElement('input'); inputMetaSize.type='number'; inputMetaSize.value = s.metaSize;
+  inputMetaSize.addEventListener('input', ()=> { s.metaSize = Number(inputMetaSize.value); renderSlide(); });
+  stepControls.appendChild(labelMetaSize); stepControls.appendChild(inputMetaSize);
+
+  const labelColor = document.createElement('label'); labelColor.textContent = 'Text color';
+  const inputColor = document.createElement('input'); inputColor.type='color'; inputColor.value = s.color;
+  inputColor.addEventListener('input', ()=> { s.color = inputColor.value; renderSlide(); });
+  stepControls.appendChild(labelColor); stepControls.appendChild(inputColor);
+
+  const hint = document.createElement('div'); hint.className = 'muted'; hint.style.marginTop='8px';
+  hint.textContent = 'Style settings apply to the current slide only.';
+  stepControls.appendChild(hint);
+}
+
+/* -------------------------
+   Step 5: finalize / export
+--------------------------*/
+function loadStep5(){
+  stepControls.innerHTML = '';
+  const btnExport = document.createElement('button');
+  btnExport.textContent = 'Export current page as PNG';
+  btnExport.addEventListener('click', exportPNG);
+  stepControls.appendChild(btnExport);
+
+  const hint = document.createElement('div'); hint.className = 'muted'; hint.style.marginTop='8px';
+  hint.textContent = 'Export saves only the currently visible slide as a PNG file.';
+  stepControls.appendChild(hint);
+}
+
+/* -------------------------
+   Steps wiring
+--------------------------*/
+function loadStep(s){
+  stepControls.innerHTML = '';
+  if(s===1) loadStep1();
+  else if(s===2) loadStep2();
+  else if(s===3) loadStep3();
+  else if(s===4) loadStep4();
+  else if(s===5) loadStep5();
+  currentStepEl.textContent = s;
+}
+
+function updateWizardUI(){
+  stepPills.forEach(p=>{
+    if(Number(p.dataset.step) === step){
+      p.style.background = '#0f1724'; p.style.color = '#fff';
+    } else {
+      p.style.background = '#f1f5f9'; p.style.color = '#334155';
+    }
+  });
+  prevBtn.disabled = (step === 1);
+  nextBtn.textContent = (step === totalSteps) ? 'Finish' : 'Next';
+  loadStep(step);
+}
+
+/* pill clicks */
+stepPills.forEach(p => p.addEventListener('click', ()=> {
+  step = Number(p.dataset.step);
+  updateWizardUI();
+}));
+
+prevBtn.addEventListener('click', ()=>{
+  if(step>1) step--;
+  updateWizardUI();
+});
+nextBtn.addEventListener('click', ()=>{
+  if(step < totalSteps) step++;
+  updateWizardUI();
+});
+
+/* -------------------------
+   Drag & drop implementation (pointer-friendly)
+--------------------------*/
+function makeDraggable(el, keyGroup){
+  // keyGroup is one of: 'subtitle', 'names', 'date' (the block's key)
+  let pointerId = null;
+  let startX=0, startY=0, origLeft=0, origTop=0;
+  el.addEventListener('pointerdown', onDown);
+  function onDown(e){
+    el.setPointerCapture(e.pointerId);
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    const elRect = el.getBoundingClientRect();
+    const parentRect = card.getBoundingClientRect();
+    origLeft = elRect.left - parentRect.left;
+    origTop  = elRect.top  - parentRect.top;
+    el.style.transition = 'none';
+  }
+  function onMove(e){
+    if(pointerId !== e.pointerId) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const parentRect = card.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    let newLeft = origLeft + dx;
+    let newTop  = origTop  + dy;
+    // clamp
+    newLeft = clamp(newLeft, 0, parentRect.width - elRect.width);
+    newTop  = clamp(newTop, 0, parentRect.height - elRect.height);
+    el.style.left = (newLeft + elRect.width/2) + 'px'; // because we use translateX(-50%)
+    el.style.top  = newTop + 'px';
+
+    // save into model
+    const centerX = Math.round(newLeft + elRect.width/2);
+    slides[current].positions[keyGroup].left = centerX;
+    slides[current].positions[keyGroup].top = Math.round(newTop);
+  }
+  function onUp(e){
+    if(pointerId !== e.pointerId) return;
+    try { el.releasePointerCapture(pointerId); } catch(_) {}
+    pointerId = null;
+    el.style.transition = '';
+  }
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+}
+
+/* enable dragging on our blocks */
+makeDraggable(blockSubtitle, 'subtitle');
+makeDraggable(blockNames, 'names');
+makeDraggable(blockDate, 'date');
+
+/* Allow double-click / Enter to edit (inline contenteditable) */
+function enableInlineEditing(el, slideKey, fieldKey){
+  el.addEventListener('dblclick', ()=> {
+    // make editable
+    el.contentEditable = 'true';
+    el.focus();
+    // on enter or blur, save
+    function finish(){
+      el.contentEditable = 'false';
+      slides[current][fieldKey] = el.textContent;
+      el.removeEventListener('blur', finish);
+      el.removeEventListener('keydown', handler);
+    }
+    function handler(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        finish();
+      }
+    }
+    el.addEventListener('blur', finish);
+    el.addEventListener('keydown', handler);
+  });
+}
+enableInlineEditing(subtitleText, null, 'subtitle');
+enableInlineEditing(namesText, null, 'names');
+enableInlineEditing(msgText, null, 'msg');
+enableInlineEditing(dateText, null, 'date');
+enableInlineEditing(venueText, null, 'venue');
+
+/* -------------------------
+   Reset positions
+--------------------------*/
+const defaultPositions = {
+  subtitle: {leftPct:50, topPct:8},
+  names: {leftPct:50, topPct:22},
+  date: {leftPct:50, topPct:40}
+};
+
+function resetPositionsForCurrent(){
+  const pr = getCardRect();
+  slides[current].positions.subtitle.left = Math.round(pr.width*defaultPositions.subtitle.leftPct/100);
+  slides[current].positions.subtitle.top = Math.round(pr.height*defaultPositions.subtitle.topPct/100);
+  slides[current].positions.names.left = Math.round(pr.width*defaultPositions.names.leftPct/100);
+  slides[current].positions.names.top = Math.round(pr.height*defaultPositions.names.topPct/100);
+  slides[current].positions.date.left = Math.round(pr.width*defaultPositions.date.leftPct/100);
+  slides[current].positions.date.top = Math.round(pr.height*defaultPositions.date.topPct/100);
+  renderSlide();
+}
+
+resetPositionsBtn.addEventListener('click', resetPositionsForCurrent);
+
+/* -------------------------
+   Export PNG
+--------------------------*/
+function exportPNG(){
+  // Temporarily hide handles for a clean export
+  document.querySelectorAll('.text-block .handle').forEach(h=>h.style.display='none');
+  html2canvas(card, {scale:3, useCORS:true, allowTaint:true, backgroundColor: null}).then(canvas => {
+    document.querySelectorAll('.text-block .handle').forEach(h=>h.style.display='block');
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `invitation-slide-${current+1}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }).catch(err=>{
+    console.error('Export failed', err);
+    alert('Export failed: ' + (err && err.message ? err.message : err));
+  });
+}
+downloadBtn.addEventListener('click', exportPNG);
+
+/* -------------------------
+   Helper to get bounding rect of card
+--------------------------*/
+function getCardRect(){
+  return card.getBoundingClientRect();
+}
+
+/* -------------------------
+   Arrow navigation & dots
+--------------------------*/
+arrowLeft.addEventListener('click', ()=> {
+  if(imagesCount()===0) return;
+  current = (current - 1 + 3) % 3;
+  renderSlide();
+});
+arrowRight.addEventListener('click', ()=> {
+  if(imagesCount()===0) return;
+  current = (current + 1) % 3;
+  renderSlide();
+});
+
+function imagesCount(){
+  return slides.filter(s=>s.bg).length;
+}
+
+/* -------------------------
+   Initialize: wizard + step content + initial render
+--------------------------*/
+function loadStepUI(){
+  // step 1 control: file uploads (3 separate)
+  // step 2: text fields for current slide
+  // step 3: positioning (instructions)
+  // step 4: style (fonts / sizes / color)
+  // step 5: finalize (export)
+  loadStep(1);
+  updateWizardUI();
+}
+
+function loadStep(n){
+  stepControls.innerHTML = '';
+  if(n === 1){
+    // three file inputs
+    for(let i=0;i<3;i++){
+      const lbl = document.createElement('label');
+      lbl.textContent = `Upload page ${i+1} image`;
+      const inp = document.createElement('input');
+      inp.type='file'; inp.accept='image/*';
+      inp.dataset.index = i;
+      inp.addEventListener('change', e=>{
+        const f = e.target.files && e.target.files[0];
+        if(!f) return;
+        const url = URL.createObjectURL(f);
+        slides[i].bg = url;
+        if(i===current) renderSlide();
+        renderDots();
+      });
+      stepControls.appendChild(lbl);
+      stepControls.appendChild(inp);
+    }
+    const hint = document.createElement('div'); hint.className='muted'; hint.textContent='Upload exactly or up to 3 images. Each file is assigned to that page.';
+    stepControls.appendChild(hint);
+  } else if(n === 2){
+    // text controls for current slide
+    const s = slides[current];
+    const fields = [
+      ['Heading (small)', 'subtitle'],
+      ['Names (main)', 'names'],
+      ['Message (below names)', 'msg'],
+      ['Date & Time', 'date'],
+      ['Venue', 'venue']
+    ];
+    fields.forEach(([labelText, key])=>{
+      const label = document.createElement('label'); label.textContent = labelText;
+      const input = document.createElement('input'); input.type='text'; input.value = s[key];
+      input.addEventListener('input', ()=> {
+        s[key] = input.value;
+        renderPreviewTexts();
+      });
+      stepControls.appendChild(label); stepControls.appendChild(input);
+    });
+    const hint = document.createElement('div'); hint.className='muted'; hint.textContent='Edit current slide text here.';
+    stepControls.appendChild(hint);
+  } else if(n === 3){
+    stepControls.innerHTML = '<p class="muted">Drag text blocks directly on the card to position. Use touch or mouse. Use Reset Positions to restore defaults.</p>';
+  } else if(n === 4){
+    // style controls for current slide
+    const s = slides[current];
+    const labelF = document.createElement('label'); labelF.textContent = 'Font family (names)';
+    const sel = document.createElement('select');
+    [['Playfair Display', "'Playfair Display', serif"], ['Poppins', "'Poppins', sans-serif"], ['Dancing Script', "'Dancing Script', cursive"], ['Georgia','Georgia, serif']].forEach(([n,v])=>{
+      const o = document.createElement('option'); o.value = v; o.textContent = n; if(v===s.fontFamily) o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', ()=> { s.fontFamily = sel.value; renderSlide(); });
+    stepControls.appendChild(labelF); stepControls.appendChild(sel);
+
+    const labelName = document.createElement('label'); labelName.textContent = 'Names size (px)';
+    const inpName = document.createElement('input'); inpName.type='number'; inpName.value = s.nameSize;
+    inpName.addEventListener('input', ()=> { s.nameSize = Number(inpName.value); renderSlide(); });
+    stepControls.appendChild(labelName); stepControls.appendChild(inpName);
+
+    const labelSub = document.createElement('label'); labelSub.textContent = 'Heading size (px)';
+    const inpSub = document.createElement('input'); inpSub.type='number'; inpSub.value = s.subtitleSize;
+    inpSub.addEventListener('input', ()=> { s.subtitleSize = Number(inpSub.value); renderSlide(); });
+    stepControls.appendChild(labelSub); stepControls.appendChild(inpSub);
+
+    const labelMeta = document.createElement('label'); labelMeta.textContent = 'Meta size (px)';
+    const inpMeta = document.createElement('input'); inpMeta.type='number'; inpMeta.value = s.metaSize;
+    inpMeta.addEventListener('input', ()=> { s.metaSize = Number(inpMeta.value); renderSlide(); });
+    stepControls.appendChild(labelMeta); stepControls.appendChild(inpMeta);
+
+    const labelColor = document.createElement('label'); labelColor.textContent = 'Text color';
+    const inpColor = document.createElement('input'); inpColor.type='color'; inpColor.value = s.color;
+    inpColor.addEventListener('input', ()=> { s.color = inpColor.value; renderSlide(); });
+    stepControls.appendChild(labelColor); stepControls.appendChild(inpColor);
+
+    const hint = document.createElement('div'); hint.className='muted'; hint.textContent = 'Style applies to the current slide.';
+    stepControls.appendChild(hint);
+  } else if(n === 5){
+    const btn = document.createElement('button'); btn.textContent = 'Export current slide as PNG';
+    btn.addEventListener('click', exportPNG);
+    stepControls.appendChild(btn);
+    const hint = document.createElement('div'); hint.className='muted'; hint.textContent = 'Download exports only the currently visible slide.';
+    stepControls.appendChild(hint);
+  }
+}
+
+/* wrapper to update wizard visuals */
+function updateWizardUI(){
+  stepPills.forEach(p=> {
+    if(Number(p.dataset.step) === step) { p.style.background='#0f1724'; p.style.color='#fff'; }
+    else { p.style.background='#f1f5f9'; p.style.color='#334155'; }
+  });
+  document.getElementById('currentStep').textContent = step;
+  prevBtn.disabled = step===1;
+  nextBtn.textContent = (step === totalSteps) ? 'Finish' : 'Next';
+  loadStep(step);
+}
+
+/* clicks on pills */
+stepPills.forEach(p => p.addEventListener('click', ()=> {
+  step = Number(p.dataset.step);
+  updateWizardUI();
+}));
+
+prevBtn.addEventListener('click', ()=> { if(step>1) step--; updateWizardUI(); });
+nextBtn.addEventListener('click', ()=> { if(step<totalSteps) step++; updateWizardUI(); });
+
+/* -------------------------
+   Save positions when page resizes
+--------------------------*/
+window.addEventListener('resize', ()=> {
+  // Keep positions same in px; re-render to ensure not off-screen
+  renderSlide();
+});
+
+/* -------------------------
+   Initialize everything
+--------------------------*/
+function init(){
+  // initial positions (defaults)
+  const r = getCardRect();
+  // ensure default positions set later inside renderSlide
+  renderSlide();
+  updateWizardUI();
+  renderDots();
+
+  // enable inline editing (double click)
+  // (already set up earlier by contentEditable approach alternative)
+  // but we want double-click: done earlier via enableInlineEditing? we used inline editing ability; suffice as is.
+
+  // attach pointer events are already wired in makeDraggable (used above)
+}
+init();
+
+/* -------------------------
+   Helpers referenced earlier
+--------------------------*/
+function getCardRect(){ return card.getBoundingClientRect(); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* -------------------------
+   Rendering initial
+--------------------------*/
+renderSlide();
+updateWizardUI();
+
+/* expose renderSlide for external use (debug) */
+window.renderSlide = renderSlide;
+
+/* -------------------------
+   Export function used in step 5 as well
+--------------------------*/
+function exportPNG(){
+  // hide handles
+  document.querySelectorAll('.text-block .handle').forEach(h=>h.style.display='none');
+  html2canvas(card, {scale:3, useCORS:true, allowTaint:true, backgroundColor:null}).then(canvas=>{
+    document.querySelectorAll('.text-block .handle').forEach(h=>h.style.display='block');
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `invitation-slide-${current+1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }).catch(err=>{
+    console.error(err);
+    alert('Export failed: ' + (err && err.message ? err.message : err));
+  });
+}
+
+/* expose a small helper to programmatically set slide image (optional) */
+window.setSlideImage = function(idx, url){
+  if(idx<0||idx>=3) return;
+  slides[idx].bg = url;
+  if(idx===current) renderSlide();
+};
+
+/* small safety — render preview texts initially */
+renderPreview = renderPreview || function(){ renderPreview(); };
+renderPreview();
+
+</script>
+</body>
+</html>
